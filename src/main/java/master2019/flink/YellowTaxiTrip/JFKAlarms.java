@@ -14,7 +14,6 @@ import java.util.Date;
 /** In this class the JFK airport trips program has to be implemented. */
 public class JFKAlarms {
   public static void main(String[] args) throws Exception {
-
     // We construct the parameter object from args.
     final ParameterTool params = ParameterTool.fromArgs(args);
 
@@ -22,63 +21,40 @@ public class JFKAlarms {
     // as we are using static files.
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
-    // This stream is going to contain the dataset.
-    DataSet<
-            Tuple18<
-                Integer, // VendorId
-                String, // tpep_pickup_datetime
-                String,
-                Double,
-                Double,
-                Double,
-                String,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double>>
-        data = null;
+    try {
+      DataSet<
+              Tuple18<
+                  Integer, // VendorId
+                  String, // tpep_pickup_datetime
+                  String,
+                  Double,
+                  Double,
+                  Double,
+                  String,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double,
+                  Double>>
+          data = IOManager.generateDataSetFromParams(env, params);
 
-    if (params.has("input")) {
-      data =
-          env.readCsvFile(params.getRequired("input"))
-              .types(
-                  Integer.class,
-                  String.class,
-                  String.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  String.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class);
-    } else {
-      System.out.println("Error: You have to specify an input file with the dataset.");
-      System.out.println("Help: use --input option");
-      return;
+      DataSet<Tuple2<String, Integer>> counts =
+          // split up the lines in pairs (2-tuples) containing: (word,1)
+          data.flatMap(new Tokenizer());
+
+      counts.print();
+      env.execute("JFK Alarms streaming");
+
+    } catch (IllegalArgumentException e) {
+      System.err.println(e.getMessage());
+      e.printStackTrace();
     }
-
-    DataSet<Tuple2<String, Integer>> counts =
-        // split up the lines in pairs (2-tuples) containing: (word,1)
-        data.flatMap(new Tokenizer());
-
-    counts.print();
-    env.execute("JFK Alarms streaming");
   }
 
   public static final class Tokenizer
