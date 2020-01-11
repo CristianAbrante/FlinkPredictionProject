@@ -2,7 +2,6 @@ package master2019.flink.YellowTaxiTrip;
 
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.tuple.Tuple18;
 import org.apache.flink.api.java.utils.ParameterTool;
 
 public class IOManager {
@@ -17,75 +16,36 @@ public class IOManager {
    * @return the dataframe
    * @throws IllegalArgumentException if option not specified.
    */
-  public static DataSet<
-          Tuple18<
-              Integer, // VendorId
-              String, // tpep_pickup_datetime
-              String,
-              Double,
-              Double,
-              Double,
-              String,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double>>
-      generateDataSetFromParams(ExecutionEnvironment env, ParameterTool params)
-          throws IllegalArgumentException {
-    DataSet<
-            Tuple18<
-                Integer, // VendorId
-                String, // tpep_pickup_datetime
-                String,
-                Double,
-                Double,
-                Double,
-                String,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double>>
-        data;
+  public static DataSet<YellowTaxyData> generateDataSetFromParams(
+      ExecutionEnvironment env, ParameterTool params) throws IllegalArgumentException {
+    DataSet<YellowTaxyData> data;
     if (params.has(IOManager.INPUT_OPTION)) {
       data =
           env.readCsvFile(params.getRequired(IOManager.INPUT_OPTION))
-              .types(
-                  Integer.class,
-                  String.class,
-                  String.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  String.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class,
-                  Double.class);
+              .pojoType(
+                  YellowTaxyData.class,
+                  "vendorid",
+                  "tpeppickupdatetime",
+                  "tpepdropoffdatetime",
+                  "passengercount",
+                  "tripdistance",
+                  "ratecodeid",
+                  "storeandfwdflag",
+                  "pulocationid",
+                  "dolocationid",
+                  "paymenttype",
+                  "fareamount",
+                  "extra",
+                  "mtatax",
+                  "tipamount",
+                  "tollsamount",
+                  "improvementsurcharge",
+                  "totalamount",
+                  "congestionamount");
+      return data;
     } else {
       throw new IllegalArgumentException(
           "Error: You have to specify an input file with the dataset, using --input option.");
     }
-    return data;
   }
 }

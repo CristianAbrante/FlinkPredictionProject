@@ -1,15 +1,10 @@
 package master2019.flink.YellowTaxiTrip;
 
-import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.tuple.Tuple18;
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.util.Collector;
-
-import java.util.Date;
 
 /** In this class the JFK airport trips program has to be implemented. */
 public class JFKAlarms {
@@ -21,92 +16,30 @@ public class JFKAlarms {
     // as we are using static files.
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
-    try {
-      DataSet<
-              Tuple18<
-                  Integer, // VendorId
-                  String, // tpep_pickup_datetime
-                  String,
-                  Double,
-                  Double,
-                  Double,
-                  String,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double,
-                  Double>>
-          data = IOManager.generateDataSetFromParams(env, params);
+    env.setParallelism(1);
 
-      DataSet<Tuple2<String, Integer>> counts =
+    try {
+      DataSet<YellowTaxyData> data = IOManager.generateDataSetFromParams(env, params);
+
+      DataSet<YellowTaxyData> counts =
           // split up the lines in pairs (2-tuples) containing: (word,1)
-          data.flatMap(new Tokenizer());
+          data.filter(new DataSetFilter()).distinct();
 
       counts.print();
-      env.execute("JFK Alarms streaming");
-
     } catch (IllegalArgumentException e) {
       System.err.println(e.getMessage());
       e.printStackTrace();
     }
   }
 
-  public static final class Tokenizer
-      implements FlatMapFunction<
-          Tuple18<
-              Integer, // VendorId
-              String, // tpep_pickup_datetime
-              String,
-              Double,
-              Double,
-              Double,
-              String,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double,
-              Double>,
-          Tuple2<String, Integer>> {
+  public static final class DataSetFilter implements FilterFunction<YellowTaxyData> {
+    public static int JFK_CODE = 2;
+    public static int MIN_NUMBER_OF_PASSENGERS = 2;
 
     @Override
-    public void flatMap(
-        Tuple18<
-                Integer, // VendorId
-                String, // tpep_pickup_datetime
-                String,
-                Double,
-                Double,
-                Double,
-                String,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double,
-                Double>
-            value,
-        Collector<Tuple2<String, Integer>> out) {
-
-      System.out.println(value.f0 + " " + value.f1 + " " + value.f2);
-      // normalize and split the line
-      out.collect(new Tuple2<String, Integer>("", 1));
+    public boolean filter(YellowTaxyData data) {
+      return data.getRatecodeid() == DataSetFilter.JFK_CODE
+          && data.getPassengercount() >= DataSetFilter.MIN_NUMBER_OF_PASSENGERS;
     }
   }
 }
