@@ -8,6 +8,7 @@ import org.apache.flink.api.java.utils.ParameterTool;
 public class IOManager {
   // String specifing option.
   public static String INPUT_OPTION = "input";
+  public static String OUTPUT_OPTION = "output";
 
   /**
    * Method using for reading the dataset from the file, using the params of the program

@@ -12,6 +12,7 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.util.IterableIterator;
 import scala.Int;
 
+import java.nio.file.FileSystem;
 import java.util.Iterator;
 
 /** In this class the JFK airport trips program has to be implemented. */
@@ -32,8 +33,12 @@ public class JFKAlarms {
               .filter(new DataSetFilter())
               .groupBy("vendorid", "pickupyear", "pickupmonth", "pickupday", "pickuphour")
               .reduceGroup(new JFKGroupReducer());
-
-      counts.print();
+      if (params.has(IOManager.OUTPUT_OPTION)) {
+        counts.writeAsCsv(params.getRequired(IOManager.OUTPUT_OPTION));
+        env.execute();
+      } else {
+        counts.print();
+      }
     } catch (IllegalArgumentException e) {
       System.err.println(e.getMessage());
       e.printStackTrace();
