@@ -48,14 +48,14 @@ public class LargeTrips {
 
     // make parameters available in the web interface
     env.getConfig().setGlobalJobParameters(params);
-    env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
+    //env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
     SingleOutputStreamOperator<Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>> mapStream = inputFile.
             map(new MapFunction<String, Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>>() {
               public Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double> map(String in) throws Exception{
                 String[] fieldArray = in.split(",");
                 Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double> out = new Tuple18(
-                        fieldArray[0],
+                        Integer.parseInt(fieldArray[0]),
                         fieldArray[1],
                         fieldArray[2],
                         Double.parseDouble(fieldArray[3]),
@@ -113,8 +113,10 @@ public class LargeTrips {
 
     // emit result
     if (params.has("output")) {
-      timedTrips.writeAsText("tumbling-"+params.get("output"));
+      timedTrips.writeAsCsv(params.get("output")+"largeTrips.csv");
     }
+
+    env.setParallelism(1);
 
     // execute program
     env.execute("LargeTrips");
