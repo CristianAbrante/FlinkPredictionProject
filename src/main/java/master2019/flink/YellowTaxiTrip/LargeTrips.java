@@ -13,6 +13,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.ProcessingTimeSessionWindows;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
@@ -40,50 +41,55 @@ public class LargeTrips {
 
     // input data and output too
     DataStream<String> inputFile;
-    DataStream<String> outputFile;
 
     // read the text file from given input path
     inputFile = env.readTextFile(params.get("input"));
-    //outputFile = env.readTextFile(params.get("output"));
 
     // make parameters available in the web interface
     env.getConfig().setGlobalJobParameters(params);
-    //env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
-    SingleOutputStreamOperator<Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>> mapStream = inputFile.
-            map(new MapFunction<String, Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>>() {
-              public Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double> map(String in) throws Exception{
+    SingleOutputStreamOperator<Tuple3<Integer,String,String>> mapStream = inputFile.
+            map(new MapFunction<String, Tuple3<Integer,String,String>>() {
+              public Tuple3<Integer,String,String> map(String in) throws Exception{
                 String[] fieldArray = in.split(",");
-                Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double> out = new Tuple18(
+                Tuple3<Integer,String,String> out = new Tuple3(
                         Integer.parseInt(fieldArray[0]),
-                        fieldArray[1],
                         fieldArray[2],
-                        Double.parseDouble(fieldArray[3]),
-                        Double.parseDouble(fieldArray[4]),
-                        Double.parseDouble(fieldArray[5]),
-                        fieldArray[6],
-                        Double.parseDouble(fieldArray[7]),
-                        Double.parseDouble(fieldArray[8]),
-                        Double.parseDouble(fieldArray[9]),
-                        Double.parseDouble(fieldArray[10]),
-                        Double.parseDouble(fieldArray[11]),
-                        Double.parseDouble(fieldArray[12]),
-                        Double.parseDouble(fieldArray[13]),
-                        Double.parseDouble(fieldArray[14]),
-                        Double.parseDouble(fieldArray[15]),
-                        Double.parseDouble(fieldArray[16]),
-                        Double.parseDouble(fieldArray[17])
+                        fieldArray[1]
                 );
-                Thread.sleep(500);
                 return out;
               }
             });
 
-    KeyedStream<Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>, Tuple> keyedStream = mapStream
+    KeyedStream<Tuple3<Integer,String,String>, Tuple> keyedStream = mapStream
+            .filter(new FilterFunction<Tuple3<Integer,String,String>>() {
+              @Override
+              public boolean filter(Tuple3<Integer,String,String> in) throws Exception {
+                String pattern = "yyyy-MM-dd HH:mm:ss"; //ex: 2019-06-01 00:55:13
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+                Date datePU = null;
+                Date dateDO = null;
+                if ((in.f1 == "") || (in.f2 == "")){
+                    return false;
+                }
+                try {
+                  datePU = simpleDateFormat.parse(in.f1);
+                  dateDO = simpleDateFormat.parse(in.f2);
+                } catch (ParseException e) {
+                  e.printStackTrace();
+                  return false;
+                }
+                long diffTime = datePU.getTime() - dateDO.getTime();
+                if (diffTime > 1000 * 60 * 20 ){ //More than 20m trip
+                  return true;
+                }
+                else { return false; }
+              }
+            })
             .assignTimestampsAndWatermarks(new
-               AscendingTimestampExtractor<Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>>(){
+               AscendingTimestampExtractor<Tuple3<Integer,String,String>>(){
                  @Override
-                 public long extractAscendingTimestamp(Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double> element) {
+                 public long extractAscendingTimestamp(Tuple3<Integer,String,String> element) {
                    String pattern = "yyyy-MM-dd HH:mm:ss"; //ex: 2019-06-01 00:55:13
                    SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
                    Date datePU = null;
@@ -98,18 +104,9 @@ public class LargeTrips {
             .keyBy(0);
 
     SingleOutputStreamOperator<Tuple5<Integer,String,Integer,String,String>> timedTrips = keyedStream
-            .window(TumblingProcessingTimeWindows.of(Time.hours(3)))
+            .window(TumblingEventTimeWindows.of(Time.hours(3)))
             .apply(new LargeTrips.TaxiTimerLargeTrips())
-            .filter(new FilterFunction<Tuple5<Integer,String,Integer,String,String>>() {
-              @Override
-              public boolean filter(Tuple5<Integer,String,Integer,String,String> in) throws Exception {
-                if(in.f2>4){
-                  return true;
-                } else {
-                  return false;
-                }
-              }
-            });
+;
 
     // emit result
     if (params.has("output")) {
@@ -123,39 +120,22 @@ public class LargeTrips {
   }
   //Function that gets the data necessary from trips of more than 20m
   public static class TaxiTimerLargeTrips implements WindowFunction<
-          Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>,
+          Tuple3<Integer,String,String>,
           Tuple5<Integer,String,Integer,String,String>,
           Tuple,
           TimeWindow> {
     public void apply(Tuple tuple,
                       TimeWindow timeWindow,
-                      Iterable<Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>> input,
+                      Iterable<Tuple3<Integer,String,String>> input,
                       Collector<Tuple5<Integer,String,Integer,String,String>> out)
             throws Exception {
-      Iterator<Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double>> iterator = input.iterator();
+      Iterator<Tuple3<Integer,String,String>> iterator = input.iterator();
 
-      Tuple18<Integer, // * VendorId
-              String, // * tpep_pickup_datetime
-              String, // * tpep_dropoff_datetime
-              Double, // passenger_count
-              Double, // trip_distance
-              Double, // RatecodeID
-              String, // store_and_fwd
-              Double, // PUlocationID
-              Double, // DOlocationID
-              Double, // Payment_type
-              Double, // fare_amount
-              Double, // extra
-              Double, // mta_tax
-              Double, // tip_amount
-              Double, // tolls_amount
-              Double, // improvement_surcharge
-              Double, // total_amount
-              Double // congestion_surcharge
-              > curr_tuple = iterator.next();
+      Tuple3<Integer,String,String> curr_tuple = iterator.next();
 
       Integer vid = 0;
       String PUd = "";
+      String fPUd = "";
       String DOd = "";
       Date datePU = null;
       Date dateDO = null;
@@ -172,24 +152,26 @@ public class LargeTrips {
         vid = curr_tuple.f0;  //Integer
         PUd = curr_tuple.f1;  //String
         DOd = curr_tuple.f2;  //String
+        fPUd = curr_tuple.f1;  //String
         datePU = simpleDateFormat.parse(PUd);
-        //dateDO = simpleDateFormat.parse(DOd);
         day = simpleDateFormat_day.format(datePU);
       }
       while(iterator.hasNext()){
-        Tuple18<Integer,String,String,Double,Double,Double,String,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double,Double> next = iterator.next();
-        vid = next.f0;
-        PUd = next.f1;
+        Tuple3<Integer,String,String> next = iterator.next();
+        //vid = next.f0;
+        //PUd = next.f1;
         DOd = next.f2;
-        datePU = simpleDateFormat.parse(PUd);
-        dateDO = simpleDateFormat.parse(DOd);
-        long diffTime = datePU.getTime() - dateDO.getTime();
-        if (diffTime > 1000 * 60 * 20 ){ //More than 20m trip
+//        datePU = simpleDateFormat.parse(PUd);
+//        dateDO = simpleDateFormat.parse(DOd);
+//        long diffTime = datePU.getTime() - dateDO.getTime();
+//        if (diffTime > 1000 * 60 * 20 ){ //More than 20m trip
           trips += 1;
-        }
+        //}
       }
-      out.collect(new Tuple5<Integer,String,Integer,String,String>
-              (vid, day, trips, PUd, DOd));
+      if(trips>4){
+        out.collect(new Tuple5<Integer,String,Integer,String,String>
+          (vid, day, trips, fPUd, DOd));
+      }
     }
   }
 }
