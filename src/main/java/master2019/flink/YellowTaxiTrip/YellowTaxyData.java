@@ -5,7 +5,19 @@ import java.util.Date;
 public class YellowTaxyData {
   private int vendorid;
   private String tpeppickupdatetime;
+  private String pickupyear;
+  private String pickupmonth;
+  private String pickupday;
+  private String pickuphour;
+  private String pickupminute;
+  private String pickupsecond;
   private String tpepdropoffdatetime;
+  private String dropoffyear;
+  private String dropoffmonth;
+  private String dropoffday;
+  private String dropoffhour;
+  private String dropoffminute;
+  private String dropoffsecond;
   private int passengercount;
   private double tripdistance;
   private int ratecodeid;
@@ -61,10 +73,73 @@ public class YellowTaxyData {
     this.improvementsurcharge = improvementsurcharge;
     this.totalamount = totalamount;
     this.congestionamount = congestionamount;
+
+    String[] splitPickupTimestamp = splitTimestamp(tpeppickupdatetime);
+    this.pickupyear = splitPickupTimestamp[0];
+    this.pickupmonth = splitPickupTimestamp[1];
+    this.pickupday = splitPickupTimestamp[2];
+    this.pickuphour = splitPickupTimestamp[3];
+    this.pickupminute = splitPickupTimestamp[4];
+    this.pickupsecond = splitPickupTimestamp[5];
+
+    String[] splitDropOffTimestamp = splitTimestamp(tpepdropoffdatetime);
+    this.dropoffyear = splitDropOffTimestamp[0];
+    this.dropoffmonth = splitDropOffTimestamp[1];
+    this.dropoffday = splitDropOffTimestamp[2];
+    this.dropoffhour = splitDropOffTimestamp[3];
+    this.dropoffminute = splitDropOffTimestamp[4];
+    this.dropoffsecond = splitDropOffTimestamp[5];
   }
 
-  public Date getDate() {
-    return new Date("15-03-1997");
+  public String[] splitTimestamp(String date) {
+    String[] timestampSplit = date.split(" ");
+    String datePart = timestampSplit[0];
+    String timePart = timestampSplit[1];
+
+    String[] datePartSplit = datePart.split("-");
+    String[] timePartSplit = timePart.split(":");
+
+    return new String[] {
+      datePartSplit[0],
+      datePartSplit[1],
+      datePartSplit[2],
+      timePartSplit[0],
+      timePartSplit[1],
+      timePartSplit[2]
+    };
+  }
+
+  @Override
+  public String toString() {
+    return "("
+        + this.getTpeppickupdatetime()
+        + " || "
+        + this.getPickupyear()
+        + "+"
+        + this.getPickupmonth()
+        + "+"
+        + this.getPickupday()
+        + " <-> "
+        + this.getPickuphour()
+        + "+"
+        + this.getPickupminute()
+        + "+"
+        + this.getPickupsecond()
+        + " || "
+        + this.getTpepdropoffdatetime()
+        + " || "
+        + this.getDropoffyear()
+        + "+"
+        + this.getDropoffmonth()
+        + "+"
+        + this.getDropoffday()
+        + " <-> "
+        + this.getDropoffhour()
+        + "+"
+        + this.getDropoffminute()
+        + "+"
+        + this.getDropoffsecond()
+        + ")";
   }
 
   public int getVendorid() {
@@ -209,5 +284,101 @@ public class YellowTaxyData {
 
   public void setCongestionamount(double congestionamount) {
     this.congestionamount = congestionamount;
+  }
+
+  public String getPickupyear() {
+    return pickupyear;
+  }
+
+  public void setPickupyear(String pickupyear) {
+    this.pickupyear = pickupyear;
+  }
+
+  public String getPickupmonth() {
+    return pickupmonth;
+  }
+
+  public void setPickupmonth(String pickupmonth) {
+    this.pickupmonth = pickupmonth;
+  }
+
+  public String getPickupday() {
+    return pickupday;
+  }
+
+  public void setPickupday(String pickupday) {
+    this.pickupday = pickupday;
+  }
+
+  public String getPickuphour() {
+    return pickuphour;
+  }
+
+  public void setPickuphour(String pickuphour) {
+    this.pickuphour = pickuphour;
+  }
+
+  public String getPickupminute() {
+    return pickupminute;
+  }
+
+  public void setPickupminute(String pickupminute) {
+    this.pickupminute = pickupminute;
+  }
+
+  public String getPickupsecond() {
+    return pickupsecond;
+  }
+
+  public void setPickupsecond(String pickupsecond) {
+    this.pickupsecond = pickupsecond;
+  }
+
+  public String getDropoffyear() {
+    return dropoffyear;
+  }
+
+  public void setDropoffyear(String dropoffyear) {
+    this.dropoffyear = dropoffyear;
+  }
+
+  public String getDropoffmonth() {
+    return dropoffmonth;
+  }
+
+  public void setDropoffmonth(String dropoffmonth) {
+    this.dropoffmonth = dropoffmonth;
+  }
+
+  public String getDropoffday() {
+    return dropoffday;
+  }
+
+  public void setDropoffday(String dropoffday) {
+    this.dropoffday = dropoffday;
+  }
+
+  public String getDropoffhour() {
+    return dropoffhour;
+  }
+
+  public void setDropoffhour(String dropoffhour) {
+    this.dropoffhour = dropoffhour;
+  }
+
+  public String getDropoffminute() {
+    return dropoffminute;
+  }
+
+  public void setDropoffminute(String dropoffminute) {
+    this.dropoffminute = dropoffminute;
+  }
+
+  public String getDropoffsecond() {
+    return dropoffsecond;
+  }
+
+  public void setDropoffsecond(String dropoffsecond) {
+    this.dropoffsecond = dropoffsecond;
   }
 }

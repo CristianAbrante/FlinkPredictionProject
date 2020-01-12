@@ -1,5 +1,6 @@
 package master2019.flink.YellowTaxiTrip;
 
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.utils.ParameterTool;
@@ -41,11 +42,38 @@ public class IOManager {
                   "tollsamount",
                   "improvementsurcharge",
                   "totalamount",
-                  "congestionamount");
+                  "congestionamount")
+              .map(new YellowTaxiCreator());
       return data;
     } else {
       throw new IllegalArgumentException(
           "Error: You have to specify an input file with the dataset, using --input option.");
+    }
+  }
+
+  public static final class YellowTaxiCreator
+      implements MapFunction<YellowTaxyData, YellowTaxyData> {
+    @Override
+    public YellowTaxyData map(YellowTaxyData yellowTaxyData) throws Exception {
+      return new YellowTaxyData(
+          yellowTaxyData.getVendorid(),
+          yellowTaxyData.getTpeppickupdatetime(),
+          yellowTaxyData.getTpepdropoffdatetime(),
+          yellowTaxyData.getPassengercount(),
+          yellowTaxyData.getTripdistance(),
+          yellowTaxyData.getRatecodeid(),
+          yellowTaxyData.getStoreandfwdflag(),
+          yellowTaxyData.getPulocationid(),
+          yellowTaxyData.getDolocationid(),
+          yellowTaxyData.getPaymenttype(),
+          yellowTaxyData.getFareamount(),
+          yellowTaxyData.getExtra(),
+          yellowTaxyData.getMtatax(),
+          yellowTaxyData.getTipamount(),
+          yellowTaxyData.getTollsamount(),
+          yellowTaxyData.getImprovementsurcharge(),
+          yellowTaxyData.getTotalamount(),
+          yellowTaxyData.getCongestionamount());
     }
   }
 }
