@@ -5,6 +5,7 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.*;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
@@ -54,8 +55,8 @@ public class LargeTrips {
                 String[] fieldArray = in.split(",");
                 Tuple3<Integer,String,String> out = new Tuple3(
                         Integer.parseInt(fieldArray[0]),
-                        fieldArray[2],
-                        fieldArray[1]
+                        fieldArray[1],
+                        fieldArray[2]
                 );
                 return out;
               }
@@ -79,8 +80,8 @@ public class LargeTrips {
                   e.printStackTrace();
                   return false;
                 }
-                long diffTime = datePU.getTime() - dateDO.getTime();
-                if (diffTime > 1000 * 60 * 20 ){ //More than 20m trip
+                long diffTime = dateDO.getTime() - datePU.getTime();
+                if (diffTime >= 1000 * 60 * 20 ){ //More than 20m trip
                   return true;
                 }
                 else { return false; }
@@ -110,10 +111,8 @@ public class LargeTrips {
 
     // emit result
     if (params.has("output")) {
-      timedTrips.writeAsCsv(params.get("output")+"largeTrips.csv");
+      timedTrips.writeAsCsv(params.get("output"),  FileSystem.WriteMode.OVERWRITE).setParallelism(1);
     }
-
-    env.setParallelism(1);
 
     // execute program
     env.execute("LargeTrips");
@@ -140,7 +139,7 @@ public class LargeTrips {
       Date datePU = null;
       Date dateDO = null;
       String day = "";
-      Integer trips = 0;
+      Integer trips = 1;
 
       String pattern = "yyyy-MM-dd HH:mm:ss"; //ex: 2019-06-01 00:55:13
       SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
@@ -154,7 +153,7 @@ public class LargeTrips {
         DOd = curr_tuple.f2;  //String
         fPUd = curr_tuple.f1;  //String
         datePU = simpleDateFormat.parse(PUd);
-        day = simpleDateFormat_day.format(datePU);
+        day = fPUd.split(" ")[0];
       }
       while(iterator.hasNext()){
         Tuple3<Integer,String,String> next = iterator.next();
@@ -168,10 +167,8 @@ public class LargeTrips {
           trips += 1;
         //}
       }
-      if(trips>4){
-        out.collect(new Tuple5<Integer,String,Integer,String,String>
-          (vid, day, trips, fPUd, DOd));
-      }
+      out.collect(new Tuple5<Integer,String,Integer,String,String>
+              (vid, day, trips, fPUd, DOd));
     }
   }
 }
